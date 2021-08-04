@@ -51,7 +51,7 @@ public:
         using mapIter = typename decltype(m_map)::iterator;
         std::lock_guard<std::mutex> lk(mut);
 
-        // End point of the input range
+        /// End point of the input range
         mapIter iterEnd = m_map.find(keyEnd);
 
         if (iterEnd != m_map.end()){
@@ -61,11 +61,28 @@ public:
             iterEnd = m_map.insert(m_map.end(), std::make_pair(keyEnd, m_map.begin()->second));
         }
 
-        // Begin point of the input range
+        /// Begin point of the input range
         auto iterBegin = m_map.insert_or_assign(keyBegin, val).first;
 
-        // Cleanup the new range
+        /// Cleanup the new range
         m_map.erase(std::next(iterBegin), iterEnd);
+
+        /// Clear redundant
+        // For example:
+        // There are same object(value) in both [5, 10) and [7, 10) (Overlap)
+        // Clear [7, 10) in this step
+        auto iterRight = iterEnd;
+        auto iterLeft = (iterBegin != m_map.begin() ? std::prev(iterBegin) : iterBegin);
+        while (iterRight != iterLeft) {
+            auto iterNext = std::prev(iterRight);
+            if (!(iterRight->second == iterNext->second)) {
+                iterRight = iterNext;
+                continue;
+            }
+            // Delete redundant element
+            m_map.erase(iterRight);
+            iterRight = iterNext;
+        }
         return true;
     }
 
